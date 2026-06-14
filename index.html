@@ -809,24 +809,21 @@ function deleteCard(id){
 async function generateCards(){
   const notes=document.getElementById('import-textarea').value.trim();
   if(!notes){toast("Primero pegá o dictá tus apuntes");return}
-  if(ANTHROPIC_KEY.includes("TU-API-KEY")){toast("Configurá tu API key de Anthropic en el archivo");return}
   const n=document.getElementById('import-count').value;
   document.getElementById('import-btn').disabled=true;
   document.getElementById('import-loading').style.display='inline';
   document.getElementById('preview-list').innerHTML='';
   previewCards=[];
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",max_tokens:1000,
-        system:`Eres tutor de ciencias médicas. Genera exactamente ${n} flashcards de alta dificultad a partir de los apuntes dados. Responde SOLO con JSON válido sin texto adicional: {"cards":[{"front":"pregunta","back":"respuesta concisa"},...]}`,
-        messages:[{role:"user",content:notes}]
+        contents:[{parts:[{text:`Eres tutor de ciencias médicas. Genera exactamente ${n} flashcards de alta dificultad a partir de los siguientes apuntes. Responde SOLO con JSON válido sin texto adicional, sin markdown: {"cards":[{"front":"pregunta","back":"respuesta concisa"}]}\n\nApuntes:\n${notes}`}]}]
       })
     });
     const data=await res.json();
-    const raw=(data.content||[]).map(b=>b.text||'').join('');
+    const raw=data.candidates[0].content.parts[0].text;
     const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
     previewCards=parsed.cards||[];
     renderPreview();
@@ -834,7 +831,7 @@ async function generateCards(){
   }catch(e){toast("Error generando preguntas. Verificá tu API key.")}
   document.getElementById('import-btn').disabled=false;
   document.getElementById('import-loading').style.display='none';
-}
+}A
 
 function renderPreview(){
   if(!previewCards.length){document.getElementById('preview-list').innerHTML='';return}
